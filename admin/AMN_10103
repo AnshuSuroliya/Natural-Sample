@@ -1,0 +1,48 @@
+0010 ************************************************************************
+0020 *  PROGRAM  : AMN10103
+0030 *  FUNCTION : REFORMAT A WORK FILE CONTAINING BULLETIN INFORMATION,
+0040 *             FOR IMPORTING AS A TEXT DOCUMENT INTO A PC.
+0050 *             WHERE THERE IS A PAGE-BREAK IN THE BULLETIN, WRITE
+0060 *             A RECORD WITH A PAGE-BREAK INDICATOR.
+0070 *             INPUT : WORK FILE 2
+0080 *             OUTPUT: WORK FILE 3
+0090 *  WRITTEN  : SEPTEMBER, 2000  TIM PERKINS    URD 00-129
+0100 ************************************************************************
+0110 *                        CHANGE HISTORY
+0120 ************************************************************************
+0130 DEFINE DATA
+0140 LOCAL
+0150 1 #WF2                  /* FILE OF BULLETIN TEXT
+0160 2 #CONTROL              (A35)
+0170 2 REDEFINE #CONTROL
+0180   3 FILLER    30X
+0190   3 #CTL      (A5)
+0200 2 #TEXT                 (A120)
+0210 *
+0220 1 #NEWPAGE              (A1)   CONST<H'0C'>
+0230 1 #PAGE-BREAK           (A120) INIT<' '>
+0240 1 REDEFINE #PAGE-BREAK
+0250   2 #CC          (A1)
+0260 1 #PHEAD-ON             (L)    INIT<FALSE>
+0270 END-DEFINE
+0280 *
+0290 MOVE #NEWPAGE TO #CC
+0300 *
+0310 READ WORK FILE 2 #WF2
+0320 *
+0330   /* CHECK FOR NEW PAGE - EACH PAGE-HEADER LINE CONTAINS "PHEAD" */
+0340   IF #CTL = 'PHEAD'
+0350       IF #PHEAD-ON
+0360           IGNORE
+0370       ELSE
+0380           MOVE TRUE TO #PHEAD-ON
+0390           WRITE WORK FILE 3 #PAGE-BREAK
+0400       END-IF
+0410   ELSE
+0420       MOVE FALSE TO #PHEAD-ON
+0430   END-IF
+0440 *
+0450   WRITE WORK FILE 3 #TEXT
+0460 *
+0470 END-WORK
+0480 END

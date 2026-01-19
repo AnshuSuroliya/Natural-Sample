@@ -1,0 +1,203 @@
+0010 ************************************************************************
+0020 * PROGRAM : AGT173                                                     *
+0030 * CREATED : 01/27/94                                                   *
+0040 * AUTHOR  : N.K.YABLONSKI                                              *
+0050 * FUNCTION: ONLINE SELECTION OF AGENTS FOR BATCH SUBMISSION OF         *
+0060 *           CARRIER SALES INFORMATION. EXECUTES PROGRAM AMN11448.      *
+0070 *           WHICH CREATES A FLAT FILE FOR ON REQUEST PROGRAM AMN11447. *
+0080 * MAPS    : AGT173M                                                    *
+0090 * TASK    : A1828T                                                     *
+0100 ************************************************************************
+0110 * Memo: A2571     Year 2000 Conversion     C_V*U_    NanBob  1997/1998 *
+0120 ************************************************************************
+0130 * ISD98022 05/1999 JJG  PERFORM EXT SUB GLS001 TO OBTAIN DBID & THE    *
+0140 *                       PROC USED IN BATCH JCL. MODIFY THE RJE JCL     *
+0150 *                       ACCORDINGLY.                                   *
+0160 ************************************************************************
+0170 * IS13-029      REPLACE GLS001 WITH GLS003        K. FULLER    08/2014
+0180 * CHANGE PERFORM OF GLS001 TO A CALLNAT FOR GLS003
+0190 ************************************************************************
+0200 DEFINE DATA
+0210 GLOBAL USING ARC000G
+0220 LOCAL
+0230 1 AGT VIEW OF AGENT
+0240   2 AGT-AGENT-CURRENT
+0250 *
+0260 1 #H1-KEY(A9) INIT <'       AY'>
+0270 1 #H2-KEY(A9) INIT <'       PY'>
+0280 1 #ACN (A7/50)
+0290 1 #ACN-SORTED (A7/50)
+0300 1 REDEFINE #ACN-SORTED
+0310   2 #DATA1 (A70)
+0320   2 #DATA2 (A70)
+0330   2 #DATA3 (A70)
+0340   2 #DATA4 (A70)
+0350   2 #DATA5 (A70)
+0360 1 #ACN-HLD(A7)
+0370 1 #LST-ACN(A7)
+0380 1 #LST-IND(I1)
+0390 1 #IND(I1)
+0400 1 #HLD-ACN(A7)
+0410 1 #HLD-IND(I1)
+0420 1 #X (I1)
+0430 1 #MSG-LN (A70)
+0440 1 #ACN-CNT(I1)
+0450 1 #NUM (I1)
+0460 *******
+0470 1 #M        (I1)
+0480 1 #AREA     (A80/21)
+0490 1 #CARDNO   (P2)
+0500 1 #LEN      (B2)
+0510 1 #RET      (B4)
+0520 1 #INPUT    (A64)
+0530 1 #DATABASE (A4)                                              /*ISD98022
+0540 1 #PROC     (A8)                                              /*ISD98022
+0550 1 #TESTID   (A9)
+0560 1 #LIBID   (A8)
+0570 1 #LINE (A65/21) INIT
+0580   <'//?JOB?    JOB (?ACCT?,00),"BUILD ACN LIST",                    ',
+0590   '//          CLASS=?$?,MSGCLASS=?�?,?USER?REGION=4096K           ',
+0600   '//UCC11 EXEC UCC11,?TYPRUN?                                     ',
+0610   '//NATURAL      EXEC ?PROC?,PARM="MT=0"?SYSOUT?           ',/*ISD98022
+0620   '//PS010.CMWKF01 DD DSN=AML.?TESTID?SROA.AGENTS.AMRR1448,        ',
+0630   '//            DISP=(NEW,CATLG,DELETE),                         ',
+0640   '//            UNIT=?UNIT?                                       ',
+0650   '//            SPACE=(TRK,(1,1),RLSE),                          ',
+0660   '//            DCB=(RECFM=FB,LRECL=7,BLKSIZE=22995)             ',
+0670   '//PS010.CMSYNIN  DD *                                            ',
+0680   'LOGON ?LIB?                                                     ',
+0690   'AMN11448                                                        ',
+0700   '?DATA1?                                                          ',
+0710   '?DATA2?                                                          ',
+0720   '?DATA3?                                                          ',
+0730   '?DATA4?                                                          ',
+0740   '?DATA5?                                                          ',
+0750   'FIN                                                             ',
+0760   '/*                                                              ',
+0770   '//?WTORSTEP?    EXEC WTOR,COND=(ONLY),                          ',
+0780   '//?WTOR? MPARM="JOB ?JOB? (AGT173 RJE) HAS ABENDED, CALL APS."'>
+0790 END-DEFINE
+0800 ***
+0810 ***  DETERMINE WHICH DATABASE & THE CORRESPONDING PROC
+0820 ***
+0830 CALLNAT 'AMN10420'  #DATABASE #PROC                             /*IS130029
+0840 *
+0850 SET KEY PF5 PF10
+0860 INCLUDE PFKEY
+0870 MOVE *PROGRAM TO #PROGRAM
+0880 REPEAT
+0890   INPUT TEXT #MSG-LN MAP 'AGT173M'
+0900   RESET #MSG-LN
+0910   IF *PF-KEY = 'PF5'
+0920     ESCAPE ROUTINE
+0930   END-IF
+0940   FOR #IND = 1 TO 50
+0950      IF #ACN(#IND) = ' '
+0960        ESCAPE TOP
+0970      END-IF
+0980      MOVE #ACN(#IND) TO SUBSTRING(#H1-KEY,1,7)
+0990                         SUBSTRING(#H2-KEY,1,7)
+1000      HISTOGRAM AGT AGT-AGENT-CURRENT #H1-KEY #H2-KEY
+1010      END-HISTOGRAM
+1020      IF *COUNTER(1000) = 0
+1030        REINPUT 'INVALID AGENT' MARK *#ACN(#IND)
+1040      END-IF
+1050      EXAMINE #ACN(*) #ACN(#IND) GIVING NUMBER #NUM
+1060      IF #NUM > 1
+1070        REINPUT 'DUPLICATE ACN' MARK *#ACN(#IND)
+1080      END-IF
+1090   END-FOR
+1100 *                SORT ACN'S
+1110   RESET #ACN-CNT #X #ACN-SORTED(*)
+1120   FOR #IND = 1 TO 50
+1130     IF #ACN(#IND) NE ' '
+1140       ADD 1 TO #ACN-CNT
+1150     END-IF
+1160   END-FOR
+1170   REPEAT
+1180     IF #ACN-CNT = #X
+1190       ESCAPE BOTTOM
+1200     END-IF
+1210     #HLD-ACN := '9999999'
+1220     FOR #IND = 1 TO 50
+1230      IF #ACN(#IND) = ' '
+1240        ESCAPE TOP
+1250      END-IF
+1260       IF #ACN(#IND) NE '9999999' AND  #ACN(#IND) < #HLD-ACN
+1270         #HLD-ACN := #ACN(#IND)
+1280         #HLD-IND := #IND
+1290       END-IF
+1300     END-FOR
+1310     IF #HLD-ACN NE ' '
+1320        ADD 1 TO #X
+1330        #ACN-SORTED(#X) := #HLD-ACN
+1340        #ACN(#HLD-IND) := '9999999'
+1350     END-IF
+1360   END-REPEAT
+1370   #ACN(*) := #ACN-SORTED(*)
+1380   IF *PF-KEY = 'PF10'
+1390     PERFORM SUBMIT
+1400   ELSE
+1410     #MSG-LN   := 'ACN"S HAVE BEEN SORTED - PRESS PF10 TO SUBMIT'
+1420   END-IF
+1430 END-REPEAT
+1440 *
+1450 DEFINE SUBMIT
+1460 FOR #M = 1 TO 21
+1470   #AREA(#M) := #LINE (#M)
+1480 END-FOR
+1490 #LEN := #M * 80
+1500 *                                    * SUBSTITUTE PARAMETERS FOR PROD *
+1510 IF #DATABASE = 'PROD'
+1520   EXAMINE #AREA(*) FOR '?JOB?'       REPLACE 'AMRR1448'
+1530   EXAMINE #AREA(*) FOR '?ACCT?'      REPLACE '0023150'
+1540   EXAMINE #AREA(*) FOR '?$?'         REPLACE '1'
+1550   EXAMINE #AREA(*) FOR '?�?'         REPLACE 'M'
+1560   EXAMINE #AREA(*) FOR '?USER?'      REPLACE 'USER=AML,'
+1570   EXAMINE #AREA(*) FOR '?TYPRUN?'    REPLACE 'TYPRUN="P"'
+1580   EXAMINE #AREA(*) FOR '?PROC?'      REPLACE #PROC            /*ISD98022
+1590   EXAMINE #AREA(*) FOR '?SYSOUT?'    DELETE                   /*ISD98022
+1600   EXAMINE #AREA(*) FOR '?TESTID?'    DELETE
+1610   EXAMINE #AREA(*) FOR '?UNIT?'      REPLACE '(SYSDA),'
+1620   EXAMINE #AREA(*) FOR '?LIB?'       REPLACE 'TAMIS'
+1630   EXAMINE #AREA(*) FOR '?WTORSTEP?'  REPLACE 'WTORSTEP'
+1640   EXAMINE #AREA(*) FOR '?WTOR?'      DELETE
+1650   EXAMINE #AREA(*) FOR '?DATA1?'     REPLACE #DATA1
+1660   EXAMINE #AREA(*) FOR '?DATA2?'     REPLACE #DATA2
+1670   EXAMINE #AREA(*) FOR '?DATA3?'     REPLACE #DATA3
+1680   EXAMINE #AREA(*) FOR '?DATA4?'     REPLACE #DATA4
+1690   EXAMINE #AREA(*) FOR '?DATA5?'     REPLACE #DATA5
+1700 ELSE                                                          /*ISD98022
+1710   #LIBID := *LIBRARY-ID                                       /*ISD98022
+1720   COMPRESS *INIT-USER '.' INTO #TESTID LEAVING NO             /*ISD98022
+1730   EXAMINE #AREA(*) FOR '?JOB?'      REPLACE 'AZXX1448'        /*ISD98022
+1740   EXAMINE #AREA(*) FOR '?ACCT?'     REPLACE '0020920'         /*ISD98022
+1750   EXAMINE #AREA(*) FOR '?$?'        REPLACE 'R'               /*ISD98022
+1760   EXAMINE #AREA(*) FOR '?�?'        REPLACE 'R'               /*ISD98022
+1770   EXAMINE #AREA(*) FOR '?USER?'     DELETE                    /*ISD98022
+1780   EXAMINE #AREA(*) FOR '?TYPRUN?'   REPLACE 'TYPRUN="F"'      /*ISD98022
+1790   EXAMINE #AREA(*) FOR '?PROC?'     REPLACE #PROC             /*ISD98022
+1800   EXAMINE #AREA(*) FOR '?SYSOUT?'   REPLACE ',SYSOUT=R'       /*ISD98022
+1810   EXAMINE #AREA(*) FOR '?TESTID?'   REPLACE #TESTID           /*ISD98022
+1820   EXAMINE #AREA(*) FOR '?UNIT?'     REPLACE '(ASDTST,2),'     /*ISD98022
+1830   EXAMINE #AREA(*) FOR '?LIB?'      REPLACE #LIBID            /*ISD98022
+1840   EXAMINE #AREA(*) FOR '?WTORSTEP?' REPLACE '*WTORSTEP'       /*ISD98022
+1850   EXAMINE #AREA(*) FOR '?WTOR?'     REPLACE '*'               /*ISD98022
+1860   EXAMINE #AREA(*) FOR '?DATA1?'    REPLACE #DATA1            /*ISD98022
+1870   EXAMINE #AREA(*) FOR '?DATA2?'    REPLACE #DATA2            /*ISD98022
+1880   EXAMINE #AREA(*) FOR '?DATA3?'    REPLACE #DATA3            /*ISD98022
+1890   EXAMINE #AREA(*) FOR '?DATA4?'    REPLACE #DATA4            /*ISD98022
+1900   EXAMINE #AREA(*) FOR '?DATA5?'    REPLACE #DATA5            /*ISD98022
+1910 END-IF
+1920 **************************FOR TESTING PURPOSES************************
+1930 IF #DATABASE = 'PROD' AND #PROC = 'NATDEV6'
+1940     COMPRESS #AREA(1) 'TYPRUN=SCAN,' INTO #AREA(1) LEAVING NO SPACE
+1950 *   FORMAT LS=90
+1960 *   WRITE NOTITLE NOHDR #AREA(*)
+1970 *   STOP
+1980 END-IF
+1990 ****************************END OF TEST CODE**************************
+2000 CALL 'RJE' #RET #AREA(1:#M - 1) #LEN
+2010 #MSG-LN := 'ACN"S HAVE BEEN SUBMITTED'
+2020 END-SUBROUTINE
+2030 END

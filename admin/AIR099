@@ -1,0 +1,78 @@
+0010 ************************************************************************
+0020 *  HELPROUTINE: AGT211H                                                *
+0030 *  FUNCTION:    HELPROUTINE CALLED FROM MAP 'AGT211HM'                 *
+0040 *               PF1 TO DISPLAY BETA RELEASE CODES                      *
+0050 *  MEMO: A2533T                                                        *
+0060 *  AUTHOR: PEG HINES                                                   *
+0070 *  DATE WRITTEN:  06/97                                                *
+0080 *  CHANGE HISTORY:                                                     *
+0090 ************************************************************************
+0100 * Memo: A2571     Year 2000 Conversion     C_V*U_    NanBob  1997/1998 *
+0110 ************************************************************************
+0120 DEFINE DATA
+0130 GLOBAL USING AGT010L
+0140 PARAMETER
+0150 1 #CDE              (A2)
+0160 LOCAL
+0170 1 MISC-CNTL VIEW OF MISCELLANEOUS-CONTROL
+0180   2 MCF-RECORD-TYPE
+0190   2 MCF-BETA-RELEASE-CODE
+0200   2 MCF-BETA-DESCRIPTION
+0210 1 AGENT-VIEW VIEW OF AGENT
+0220   2 AGT-BETA-RELEASE-CODE
+0230 1 #SUPER           (A5) INIT<'001'>
+0240 1 REDEFINE #SUPER
+0250   2 #REC-TYPE         (N3)
+0260   2 #BETA             (A2)
+0270 1 #SELECT          (A1/13)
+0280 1 #CODE            (A2/13)
+0290 1 #DESC            (A20/13)
+0300 1 #CNT             (P2)
+0310 1 #IND             (P2)
+0320 1 #NUM             (P2)
+0330 1 #CNTLVAR         (C/13)
+0340 1 #TITLE           (A50) INIT<'BETA RELEASE CODES'>
+0350 END-DEFINE
+0360 *
+0370 SET KEY
+0380 PF3 = PGM
+0390 *
+0400 SET CONTROL 'WFC20L50B1/3'
+0410 CALLNAT 'AMN10103' TRUE #TITLE
+0420 /* ----------------------------------------------------------------
+0430 REPEAT
+0440   RESET #SELECT(*)
+0450     #CODE(*) #DESC(*)
+0460   MOVE (AD=P) TO #CNTLVAR(*)
+0470   READ (13) MISC-CNTL WITH MCF-REC-TYPE-BETA-CODE = #SUPER
+0480     ASSIGN #CNT = *COUNTER
+0490     MOVE MCF-BETA-RELEASE-CODE TO #CODE (#CNT)
+0500     MOVE MCF-BETA-DESCRIPTION TO #DESC (#CNT)
+0510     MOVE (AD=U) TO #CNTLVAR (#CNT)
+0520   END-READ
+0470   FIND (13) AGENT-VIEW WITH MCF-REC-TYPE-BETA-CODE = #SUPER
+0480     ASSIGN #CNT = *COUNTER
+0490     MOVE MCF-BETA-RELEASE-CODE TO #CODE (#CNT)
+0500     MOVE MCF-BETA-DESCRIPTION TO #DESC (#CNT)
+0510     MOVE (AD=U) TO #CNTLVAR (#CNT)
+0520   END-FIND
+0530   ASSIGN #BETA = #CODE(13)
+0540   ASSIGN MCF-BETA-DESCRIPTION = #DESC(13)
+0550   INPUT USING MAP 'AGT211HM'
+0560   EXAMINE #SELECT(*) FOR 'X' GIVING NUMBER #NUM INDEX #IND
+0570   DECIDE FOR FIRST CONDITION
+0580     WHEN
+0590         #NUM > 1 REINPUT 'CHOOSE ONLY 1 BETA RELEASE CODE'
+0600       RESET #SELECT(*)
+0610     WHEN
+0620         #IND > 0
+0630       MOVE #CODE (#IND) TO #CDE
+0640       ESCAPE ROUTINE
+0650     WHEN
+0660     NONE IGNORE
+0670   END-DECIDE
+0680   IF *PF-KEY = 'PF3'
+0690     ESCAPE ROUTINE
+0700   END-IF
+0710 END-REPEAT
+0720 END

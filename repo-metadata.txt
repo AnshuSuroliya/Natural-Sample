@@ -1,0 +1,8 @@
+admin/AGT170={"program_type" : "Program"}
+admin/AGT170M1.map={"program_type" : "Map"}
+admin/AGT170M2.map={"program_type" : "Map"}
+admin/AGT173={"program_type" : "Program"}
+admin/AIR090={"program_type" : "SubProgram"}
+admin/AIR099={"program_type" : "SubProgram"}
+admin/AMN10103={"program_type" : "SubProgram"}
+admin/AMN10420={"program_type" : "SubProgram"}

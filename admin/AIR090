@@ -1,0 +1,423 @@
+0010 ************************************************************************
+0020 * MEMO: A503T     PROGRAMMER: KEN VEIRLING        DATE: 03/20/91       *
+0030 *                             MIKE SELLERS                             *
+0040 *  INQUIRY SCREEN FOR CARRIER INFORMATION FOR CARRIER SALES SUMMARY    *
+0050 *  SYSTEM.  (A9)                                                       *
+0060 ************************************************************************
+0070 * MEMO: A1033       PROGRAMMER: PAT STENGER            DATE: 07/23/91  *
+0080 * ADD USER=TAM TO JOB CARD FOR TOP SECRET IMPLEMENTATION.              *
+0090 ************************************************************************
+0100 *  MEMO: A1828T      PROGRAMMER: RJH                    DATE: 01/94    *
+0110 *  FETCH RETURN AIR099-PF7 TO SUBMIT RERUNS/MONITOR CARRIER SALES      *
+0120 ************************************************************************
+0130 * MEMO: A2571     YEAR 2000 CONVERSION     C_V*U*F    NANBOB  1997/1998*
+0140 ************************************************************************
+0150 * ISD98022 05/1999 JJG  PERFORM EXT SUB GLS001 TO OBTAIN DBID & THE    *
+0160 *                       CORRESPONDING BATCH PROC. MODIFY RJE JCL AS    *
+0170 *                       NEEDED.                                        *
+0180 ************************************************************************
+0190 * MEMO:          TAM99001                                              *
+0200 * PROJECT:       APS FIX - CHANGE 'FLB' TO 'FCB'                       *
+0210 * PROGRAMMER:    AARON BURGESS                                         *
+0220 * DATE:          12/03/99                                              *
+0230 *                                                                      *
+0240 * DESCRIPTION:   1) UPDATE PROGRAM TO CHANGE 'FLB' TO 'FCB' FOR SYSOUT *
+0250 *                   IN GENERATED JCL.                                  *
+0260 ************************************************************************
+0270 * URD97036  01/2000  JJG  MODIFICATIONS TO THE CARRIER SALES TAPE      *
+0280 * ADD NEW FIELDS ON THE CARRIER-445 VIEW, AND THE SCREEN MAP.  CHANGE  *
+0290 * TPE-ANNUAL-445,TPE-MONTHLY-445 TO TPE-ANNUAL-TAPE,TPE-MONTHLY-TAPE   *
+0300 * AND TPE-ANNUAL-447,TPE-MONTHLY-447 TO TPE-ANNUAL-RPT,TPE-MONTHLY-RPT.*
+0310 * CHANGE RJE JCL: ADD 2 NEW PROGRAMS TO BE EXECUTED; CHANGE PROGRAM    *
+0320 * NAMES TO FOLLOW STANDARDS; SEND REPORTS TO TRIMS.                    *
+0330 ************************************************************************
+0340 * URD02-351  PHASE 1 - CONVERT 445 PRODUCTION TO COMPASS               *
+0350 * 11/2002    JIM GILCHRIST                                             *
+0360 * ADD WEEKLY OPTION TO ALL MEDIA TYPES. CHANGE TAPE OPTION ON MAP TO   *
+0370 * REFLECT CARTRIDGE ONLY.                                              *
+0380 ************************************************************************
+0390 * URD03-192 DATA ENTRY REQUIREMENTS FOR A9, A12 AND A14 SCREENS IN TAMIS
+0400 * 08/26/03   JACKIE OGLESBY                                            *
+0410 * REMOVED THE AIRLINE VIEW FROM PROGRAM SINCE IT WASNT' USED IN PGM.   *
+0420 ************************************************************************
+0430 DEFINE DATA
+0440 GLOBAL USING ARC000G
+0450 LOCAL
+0460 1 CARRIER-445-VIEW VIEW OF CARRIER-445
+0470   2 TPE-AIRLINE-CODE
+0480   2 TPE-AIRLINE-CK
+0490   2 TPE-STATUS
+0500   2 TPE-NAME
+0510   2 TPE-THIRD-PARTY
+0520   2 TPE-CONTACT
+0530   2 TPE-ADDRESS-1
+0540   2 TPE-ADDRESS-2
+0550   2 TPE-ADDRESS-3
+0560   2 TPE-CITY
+0570   2 TPE-STATE
+0580   2 TPE-ZIP-CODE-5
+0590   2 TPE-ZIP-CODE-4
+0600   2 TPE-ANNUAL-TAPE                                           /*URD97036
+0610   2 TPE-MONTHLY-TAPE                                          /*URD97036
+0620   2 TPE-WEEKLY-TAPE                                           /*URD02351
+0630   2 TPE-ANNUAL-RPT                                            /*URD97036
+0640   2 TPE-MONTHLY-RPT                                           /*URD97036
+0650   2 TPE-WEEKLY-RPT                                            /*URD02351
+0660   2 TPE-ANNUAL-DISK                                           /*URD97036
+0670   2 TPE-MONTHLY-DISK                                          /*URD97036
+0680   2 TPE-WEEKLY-DISK                                           /*URD02351
+0690   2 TPE-FICHE
+0700   2 TPE-DENSITY
+0710   2 TPE-LABEL
+0720   2 TPE-LAST-UPDATE
+0730   2 TPE-LAST-USER
+0740   2 TPE-CODE
+0750   2 TPE-RECIPIENT-NAME
+0760 *
+0770 ** MAP FIELDS
+0780 ****
+0790 1 #ADDRESS-1     (A30)
+0800 1 #ADDRESS-2     (A30)
+0810 1 #ADDRESS-3     (A30)
+0820 1 #AIRLINE-CODE  (A4)
+0830 1 #CITY          (A13)
+0840 1 #CODE          (A8)
+0850 1 #CONTACT       (A30)
+0860 1 #DENSITY       (A4)
+0870 1 #FICHE         (A1)
+0880 1 #LABEL         (A2)
+0890 1 #NAME          (A30)
+0900 1 #RECIPIENT-NAME(A30)
+0910 1 #STATE         (A2)
+0920 1 #STATUS        (A1)
+0930 1 #STATUS-DESC   (A7)
+0940 1 #THIRD-PARTY   (A1)
+0950 1 #ZIP-CODE      (A10)
+0960 1 #CARRIER       (A4/15)
+0970 1 #COUNT         (A2/15)
+0980 1 #RECIPIENT     (A30/15)
+0990 1 #STATUS1       (A1/15)
+1000 1 #STATUS-DESC1  (A7/15)
+1010 1 #THIRD-PARTY1  (A1/15)
+1020 1 #THIRD-PARTY-DESC (A11/15)
+1030 1 #INDEX            (N2)
+1040 1 #FREQ-FLAGS       (A9)                                      /*URD02351
+1050 1 REDEFINE #FREQ-FLAGS                                        /*URD02351
+1060   2 #ANNUAL-TAPE   (A1)                                       /*URD97036
+1070   2 #ANNUAL-RPT    (A1)                                       /*URD97036
+1080   2 #ANNUAL-DISK   (A1)                                       /*URD97036
+1090   2 #MONTHLY-TAPE  (A1)                                       /*URD97036
+1100   2 #MONTHLY-RPT   (A1)                                       /*URD97036
+1110   2 #MONTHLY-DISK  (A1)                                       /*URD97036
+1120   2 #WEEKLY-TAPE   (A1)                                       /*URD02351
+1130   2 #WEEKLY-RPT    (A1)                                       /*URD02351
+1140   2 #WEEKLY-DISK   (A1)                                       /*URD02351
+1150 *
+1160 1 #COUNTER                (P3)
+1170 1 #UPDATE                 (A1)
+1180 1 #CNTL                   (C)
+1190 1 #RETRY                  (A1)
+1200 1 #I                      (P2)
+1210 1 #ISN-TAB                (P8/15)
+1220 *
+1230 1 #AIRLINE-KEY            (A4)
+1240 1 REDEFINE #AIRLINE-KEY
+1250   2 #AIRLINE-CODE-KEY     (A3)
+1260   2 #AIRLINE-STATUS-KEY   (A1)
+1270 *
+1280 1 #445-KEY                (A4)
+1290 1 REDEFINE #445-KEY
+1300   2 #445-AIRLINE-CODE     (A3)
+1310   2 #445-THIRD-PARTY      (A1)
+1320 *
+1330 1 #HOLD-KEY               (A5)
+1340 1 REDEFINE #HOLD-KEY
+1350   2 #HOLD-CARRIER         (A3)
+1360   2 #HOLD-FILLER          (A1)
+1370   2 #HOLD-THIRD-PARTY     (A1)
+1380 *
+1390 1 #HOLD-ZIP               (A10)
+1400 1 REDEFINE #HOLD-ZIP
+1410   2 #HOLD-ZIP-5           (A5)
+1420   2 #HOLD-DASH            (A1)
+1430   2 #HOLD-ZIP-4           (A4)
+1440 *
+1450 1 #HOLD-AIRLINE-CODE      (A4)
+1460 1 REDEFINE #HOLD-AIRLINE-CODE
+1470   2 #HOLD-CODE-3          (A3)
+1480   2 #HOLD-CODE-1          (A1)
+1490 *
+1500 1 #REPORTS                (A1)
+1510 1 #LEN                    (B2)
+1520 1 #RET                    (B4)
+1530 1 #DATABASE               (A4)                                /*ISD98022
+1540 1 #PROC                   (A8)                                /*ISD98022
+1550 1 #LIBID                  (A8)                                /*ISD98022
+1560 *
+1570 1 #AREA                   (A80/25) INIT                       /*URD97036
+1580   <'//?JOB? JOB (?ACCT?,00),"CARRIER INFO",',                 /*ISD98022
+1590    '//      CLASS=?$?,MSGCLASS=?�??USER?',                    /*ISD98022
+1600    '//AMN18900 EXEC ?PROC?,PARM="MT=0"?NSYSOUT?',             /*URD97036
+1610    '//PS010.CMSYNIN  DD *                      ',             /*ISD98022
+1620    'LOGON ?LIB?                                ',             /*ISD98022
+1630    'AMN18910',                                                /*URD97036
+1640    'AMN18915',                                                /*URD02351
+1650    'AMN18920',                                                /*URD97036
+1660    'AMN18930',                                                /*URD97036
+1670    'AMN18935',                                                /*URD02351
+1680    'AMN18940',                                                /*URD97036
+1690    'AMN18950',                                                /*URD97036
+1700    'AMN18955',                                                /*URD02351
+1710    'AMN18960',                                                /*URD97036
+1720    'AMN18970',                                                /*URD97036
+1730    'AMN18980',                                                /*URD97036
+1740    'AMN18985',                                                /*URD02351
+1750    'AMN18990',                                                /*URD97036
+1760    'FIN    ',                                                 /*ISD98022
+1770    '/*',                                                      /*ISD98022
+1780    '//PS010.CMPRT01 DD SYSOUT=?SYSOUT1?                ',     /*URD97036
+1790    '//PS010.CMPRT02 DD SYSOUT=?SYSOUT2?                ',     /*URD97036
+1800    '//?WTORSTEP?   EXEC WTOR,COND=(ONLY),              ',     /*ISD98022
+1810    '//?WTOR? MPARM="JOB ?JOB? (AIR090 RJE) HAS ABENDED, CALL APS."',
+1820    '//                                                 '>     /*ISD98022
+1830 END-DEFINE
+1840 ** ------------------  START OF PROCEDURE    ------------------------- *
+1850 INCLUDE PFKEY
+1860 INCLUDE ARC999
+1870 MOVE *PROGRAM     TO #PROGRAM
+1880 MOVE (AD=PI) TO #CNTL1
+1890 REPEAT
+1900 *
+1910   RESET #ISN-TAB(*) #I #ADDRESS-1 #ADDRESS-2 #ADDRESS-3
+1920     #PREV-KEY #AIRLINE-CODE #ANNUAL-TAPE #ANNUAL-RPT #CONTACT /*URD97036
+1930     #CITY #DENSITY #FICHE #LABEL #MONTHLY-TAPE #MONTHLY-RPT   /*URD97036
+1940     #NAME #STATE #STATUS #STATUS-DESC #THIRD-PARTY #ZIP-CODE
+1950     #CARRIER(*) #COUNT(*) #RECIPIENT(*) #STATUS1(*)
+1960     #STATUS-DESC1(*) #THIRD-PARTY1(*) #THIRD-PARTY-DESC(*)
+1970     #COUNTER #INDEX #PREV-ACTION #ANNUAL-DISK #MONTHLY-DISK   /*URD97036
+1980     #WEEKLY-TAPE #WEEKLY-RPT #WEEKLY-DISK                     /*URD02351
+1990 *
+2000   IF #REPORTS = 'Y'
+2010     INPUT WITH TEXT #MSG USING MAP 'AIR090M'
+2020     IF *PF-KEY = 'PF7'
+2030       FETCH RETURN 'AIR099'
+2040       ESCAPE ROUTINE
+2050     END-IF
+2060     RESET #MSG #REPORTS
+2070     ESCAPE TOP
+2080   ELSE
+2090     RESET #MSG
+2100   END-IF
+2110 *
+2120   ASSIGN #PREV-SCREEN-NBR = #SCREEN-NBR
+2130   ASSIGN #PREV-KEY        = #KEY
+2140   ASSIGN #PREV-ACTION     = #ACTION
+2150 *
+2160   MOVE #KEY TO #HOLD-KEY
+2170   MOVE #HOLD-CARRIER TO #445-AIRLINE-CODE
+2180   MOVE #HOLD-THIRD-PARTY TO #445-THIRD-PARTY
+2190 *
+2200   READ CARRIER-445-VIEW BY TPE-AIR-THIRD-PARTY STARTING FROM #445-KEY
+2210 *
+2220     AT END OF DATA(2200)
+2230 *
+2240       IF #COUNTER LE 0
+2250         ESCAPE BOTTOM(2200)                                   /*URD97036
+2260       END-IF
+2270 *
+2280       MOVE (AD=I) TO #CNTL
+2290       MOVE 'PF7 - REQ RERUN  PF9 - PRINT RPTS' TO #INFO-MSG
+2300       INPUT WITH TEXT #MSG MARK *#INDEX USING MAP 'AIR090M'
+2310 *
+2320       IF #SCREEN-NBR NE #PREV-SCREEN-NBR OR
+2330          #ACTION     NE #PREV-ACTION
+2340         RESET #MSG
+2350         ESCAPE ROUTINE
+2360       END-IF
+2370 *
+2380       IF #KEY NE #PREV-KEY
+2390         ESCAPE BOTTOM (2200)
+2400       END-IF
+2410 *
+2420       RESET #MSG
+2430 *
+2440       IF *PF-KEY = 'PF9'
+2450         PERFORM PRINT-REPORTS
+2460       ELSE
+2470         IF *PF-KEY = 'PF7'
+2480           FETCH RETURN 'AIR099'
+2490           ESCAPE ROUTINE
+2500         END-IF
+2510 *
+2520         IF #INDEX > 0 AND #INDEX LE #I
+2530           IGNORE
+2540         ELSE
+2550           REINPUT WITH TEXT 'INVALID OPTION - TRY AGAIN' MARK *#INDEX
+2560         END-IF
+2570 *
+2580         GET CARRIER-445-VIEW #ISN-TAB(#INDEX)
+2590 *
+2600         COMPRESS TPE-AIRLINE-CODE TPE-AIRLINE-CK INTO #AIRLINE-CODE
+2610           LEAVING NO SPACE
+2620         MOVE TPE-ADDRESS-1      TO #ADDRESS-1
+2630         MOVE TPE-ADDRESS-2      TO #ADDRESS-2
+2640         MOVE TPE-ADDRESS-3      TO #ADDRESS-3
+2650         MOVE TPE-ANNUAL-TAPE    TO #ANNUAL-TAPE               /*URD97036
+2660         MOVE TPE-ANNUAL-RPT     TO #ANNUAL-RPT                /*URD97036
+2670         MOVE TPE-ANNUAL-DISK    TO #ANNUAL-DISK               /*URD97036
+2680         MOVE TPE-CITY           TO #CITY
+2690         MOVE TPE-CODE           TO #CODE
+2700         MOVE TPE-CONTACT        TO #CONTACT
+2710         MOVE TPE-DENSITY        TO #DENSITY
+2720         MOVE TPE-FICHE          TO #FICHE
+2730         MOVE TPE-LABEL          TO #LABEL
+2740         MOVE TPE-MONTHLY-TAPE   TO #MONTHLY-TAPE              /*URD97036
+2750         MOVE TPE-MONTHLY-RPT    TO #MONTHLY-RPT               /*URD97036
+2760         MOVE TPE-MONTHLY-DISK   TO #MONTHLY-DISK              /*URD97036
+2770         MOVE TPE-NAME           TO #NAME
+2780         MOVE TPE-RECIPIENT-NAME TO #RECIPIENT-NAME
+2790         MOVE TPE-STATE          TO #STATE
+2800         MOVE TPE-STATUS         TO #STATUS
+2810         MOVE TPE-WEEKLY-TAPE    TO #WEEKLY-TAPE               /*URD02351
+2820         MOVE TPE-WEEKLY-RPT     TO #WEEKLY-RPT                /*URD02351
+2830         MOVE TPE-WEEKLY-DISK    TO #WEEKLY-DISK               /*URD02351
+2840 *
+2850         IF TPE-STATUS = 'A'
+2860           MOVE 'ACTIVE' TO #STATUS-DESC
+2870         ELSE
+2880           MOVE 'INACTIVE' TO #STATUS-DESC
+2890         END-IF
+2900 *
+2910         MOVE TPE-THIRD-PARTY TO #THIRD-PARTY
+2920 *
+2930         IF TPE-ZIP-CODE-4 = MASK(NNNN)
+2940           COMPRESS TPE-ZIP-CODE-5 '-' TPE-ZIP-CODE-4 INTO #ZIP-CODE
+2950             LEAVING NO SPACE
+2960         ELSE
+2970           MOVE TPE-ZIP-CODE-5 TO #ZIP-CODE
+2980         END-IF
+2990 *
+3000         MOVE (AD=PI) TO #CNTL2
+3010         MOVE 'PRESS ENTER FOR PREV SCREEN' TO #INFO-MSG
+3020 *
+3030         INPUT WITH TEXT #MSG USING MAP 'AIR090M1'
+3040 *
+3050         IF #SCREEN-NBR NE #PREV-SCREEN-NBR OR
+3060            #ACTION     NE #PREV-ACTION
+3070           RESET #MSG
+3080           ESCAPE ROUTINE
+3090         END-IF
+3100 *
+3110         RESET #ADDRESS-1 #ADDRESS-2 #ADDRESS-3 #AIRLINE-CODE
+3120           #ANNUAL-TAPE #ANNUAL-RPT #CITY #CONTACT #DENSITY    /*URD97036
+3130           #FICHE #LABEL #MONTHLY-TAPE #MONTHLY-RPT #NAME      /*URD97036
+3140           #STATE #STATUS #STATUS-DESC #THIRD-PARTY #ZIP-CODE
+3150           #ANNUAL-DISK #MONTHLY-DISK                          /*URD97036
+3160           #WEEKLY-TAPE #WEEKLY-RPT #WEEKLY-DISK               /*URD02351
+3170 *
+3180       END-IF /* (2440)
+3190 *
+3200       ESCAPE BOTTOM(2200)
+3210     END-ENDDATA /* (2220)
+3220 *
+3230     IF TPE-AIRLINE-CODE NE #445-AIRLINE-CODE
+3240       ESCAPE BOTTOM(2200)
+3250     END-IF
+3260 *
+3270     ADD 1 TO #COUNTER
+3280     ADD 1 TO #I
+3290     COMPRESS TPE-AIRLINE-CODE TPE-AIRLINE-CK INTO #CARRIER(#I)
+3300       LEAVING NO SPACE
+3310     MOVE TPE-RECIPIENT-NAME TO #RECIPIENT(#I)
+3320     MOVE #I TO #COUNT(#I)
+3330     MOVE TPE-STATUS TO #STATUS1(#I)
+3340     MOVE TPE-THIRD-PARTY TO #THIRD-PARTY1(#I)
+3350 *
+3360     IF TPE-STATUS = 'A'
+3370       MOVE 'ACTIVE' TO #STATUS-DESC1(#I)
+3380     ELSE
+3390       MOVE 'INACTIVE' TO #STATUS-DESC1(#I)
+3400     END-IF
+3410 *
+3420     IF TPE-THIRD-PARTY = 'Y'
+3430       MOVE 'THIRD PARTY' TO #THIRD-PARTY-DESC(#I)
+3440     ELSE
+3450       RESET #THIRD-PARTY-DESC(#I)
+3460     END-IF
+3470 *
+3480     MOVE *ISN TO #ISN-TAB(#I)
+3490   END-READ /* (2200)
+3500 *
+3510   IF #COUNTER LE 0
+3520     MOVE 'NO RECORD FOUND-INVALID KEY' TO #ERR-MSG
+3530     MOVE 'PF7 - REQ RERUN  PF9 - PRINT RPTS' TO #INFO-MSG
+3540     INPUT WITH TEXT #MSG MARK 2 USING MAP 'AIR090M'
+3550     RESET #MSG
+3560 *
+3570     IF #SCREEN-NBR NE #PREV-SCREEN-NBR OR
+3580        #ACTION     NE #PREV-ACTION
+3590       ESCAPE ROUTINE
+3600     END-IF
+3610 *
+3620     IF *PF-KEY = 'PF7'
+3630       FETCH RETURN 'AIR099'
+3640       ESCAPE ROUTINE
+3650     END-IF
+3660     IF *PF-KEY = 'PF9'
+3670       PERFORM PRINT-REPORTS
+3680     END-IF
+3690 *
+3700   END-IF /* (3510)
+3710 *
+3720 END-REPEAT /* (1890)
+3730 *
+3740 *
+3750 DEFINE SUBROUTINE PRINT-REPORTS
+3760 * PERFORM GLS003 #DATABASE #PROC            /* EXT SUB         ISD98022
+3770 CALLNAT 'AMN10420' #DATABASE #PROC
+3780 *
+3790 IF #DATABASE = 'PROD'                                         /*ISD98022
+3800   EXAMINE #AREA(*) FOR '?JOB?'     REPLACE 'AMRR8900'         /*URD97036
+3810   EXAMINE #AREA(*) FOR '?ACCT?'    REPLACE '0023150'          /*ISD98022
+3820   EXAMINE #AREA(*) FOR '?$?'       REPLACE '4'                /*ISD98022
+3830   EXAMINE #AREA(*) FOR '?�?'       REPLACE 'M'                /*ISD98022
+3840   EXAMINE #AREA(*) FOR '?USER?'    REPLACE ',USER=TAM'        /*ISD98022
+3850   EXAMINE #AREA(*) FOR '?PROC?'    REPLACE #PROC              /*ISD98022
+3860   EXAMINE #AREA(*) FOR '?NSYSOUT?' DELETE                     /*ISD98022
+3870   EXAMINE #AREA(*) FOR '?SYSOUT1?' REPLACE                    /*URD97036
+3880                        '(N,AM8900BB),DEST=TRMSA'              /*URD97036
+3890   EXAMINE #AREA(*) FOR '?SYSOUT2?' REPLACE                    /*URD97036
+3900                        '(N,AM8900BC),DEST=TRMSA'              /*URD97036
+3910   EXAMINE #AREA(*) FOR '?LIB?'     REPLACE 'TAMIS'            /*ISD98022
+3920   EXAMINE #AREA(*) FOR '?WTORSTEP?' REPLACE 'WTORSTEP'        /*ISD98022
+3930   EXAMINE #AREA(*) FOR '?WTOR?'    DELETE                     /*ISD98022
+3940 ELSE                                                          /*ISD98022
+3950   #LIBID := *LIBRARY-ID                                       /*ISD98022
+3960   EXAMINE #AREA(*) FOR '?JOB?'     REPLACE 'AZXX8900'         /*URD97036
+3970   EXAMINE #AREA(*) FOR '?ACCT?'    REPLACE '0020920'          /*ISD98022
+3980   EXAMINE #AREA(*) FOR '?$?'       REPLACE 'R'                /*ISD98022
+3990   EXAMINE #AREA(*) FOR '?�?'       REPLACE 'R'                /*ISD98022
+4000   EXAMINE #AREA(*) FOR '?USER?'    DELETE                     /*ISD98022
+4010   EXAMINE #AREA(*) FOR '?PROC?'    REPLACE #PROC              /*ISD98022
+4020   EXAMINE #AREA(*) FOR '?NSYSOUT?' REPLACE ',SYSOUT=R'        /*ISD98022
+4030   EXAMINE #AREA(*) FOR '?SYSOUT1?' REPLACE '(J,AM8900BB)'     /*URD97036
+4040   EXAMINE #AREA(*) FOR '?SYSOUT2?' REPLACE '(J,AM8900BC)'     /*URD97036
+4050   EXAMINE #AREA(*) FOR '?LIB?'     REPLACE #LIBID             /*ISD98022
+4060   EXAMINE #AREA(*) FOR '?WTORSTEP?' REPLACE '*WTORSTEP'       /*ISD98022
+4070   EXAMINE #AREA(*) FOR '?WTOR?'    REPLACE '*'                /*ISD98022
+4080 END-IF                                                        /*ISD98022
+4090 ************************************************************************
+4100 COMPUTE #LEN = 80 * 21                                        /*URD97036
+4110 CALL 'RJE' #RET #AREA(1:21) #LEN                              /*URD97036
+4120 *
+4130 IF #RET = 0
+4140   COMPRESS 'JOB SUBMITTED ' *TIME INTO #ERR-MSG
+4150 ELSE
+4160   COMPRESS '**ERROR**JOB NOT SUBMITTED ' *TIME INTO #ERR-MSG
+4170 END-IF /* (4130)
+4180 *
+4190 MOVE '     PRESS ENTER TO CONTINUE' TO #INFO-MSG
+4200 MOVE 'Y' TO #REPORTS
+4210 END-SUBROUTINE /* (3750)
+4220 *
+4230 END
